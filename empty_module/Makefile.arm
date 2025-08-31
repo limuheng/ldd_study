@@ -1,5 +1,5 @@
 PWD := $(shell pwd)
-KERNEL_DIR = /lib/modules/6.6.87.2-microsoft-standard-WSL2+/build
+KERNEL_DIR = /workspace/buildroot/output/build/linux-6.12.27
 
 MODULE_NAME = empty_module
 # obj-y: build static linked module
@@ -8,6 +8,7 @@ MODULE_NAME = empty_module
 obj-m := $(MODULE_NAME).o
 
 all:
-	make -C $(KERNEL_DIR) M=$(PWD) modules
+	make ARCH=arm CROSS_COMPILE=arm-buildroot-linux-gnueabihf- \
+		-C $(KERNEL_DIR) M=$(PWD) modules
 clean:
 	make -C $(KERNEL_DIR) M=$(PWD) clean

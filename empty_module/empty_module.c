@@ -6,13 +6,13 @@
  * otherwise, the module will not be loaded.
  */
 static int empty_module_init(void) {
-    pr_info("Init Empty Module...");
+    pr_info("Init Empty Module...\n");
     return 0;
 }
 
 /** module clean-up entry point */
 static void empty_module_exit(void) {
-    pr_info("Exit Empty Module...");
+    pr_info("Exit Empty Module...\n");
 }
 
 /* register module entry point to kernel */
