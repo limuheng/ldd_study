@@ -1,4 +1,5 @@
 #include <linux/cdev.h>
+#include <linux/err.h>
 #include <linux/export.h>
 #include <linux/fs.h>
 #include <linux/module.h>
@@ -11,7 +12,8 @@ static struct cdev empty_cdev;
 static struct file_operations empty_cdev_fops = {
     .owner = THIS_MODULE
 };
-static struct class *cls;
+static struct class* cls;
+static struct device* dev;
 
 /**
  * Module initialization entry point
@@ -22,26 +24,49 @@ static int empty_char_driver_init(void) {
        the major number will be assgined dynamically. */
     int ret = alloc_chrdev_region(&dev_num, 0, NUM_DEVICES, DEVICE_NAME);
     if (ret != 0) {
-        pr_err("[empty_char_driver_init] Failed to init Empty Char Driver...\n");
-        return ret;
+        pr_err("[empty_char_driver_init] alloc_chrdev_region returns error: %d\n", -ret);
+        goto quit;
     }
     pr_info("[empty_char_driver_init] Create device number: <%d:%d>\n", MAJOR(dev_num), MINOR(dev_num));
 
-    /* Iniitialize cdev variable */
+    /* Iniitialize cdev variable and register handlers */
     cdev_init(&empty_cdev, &empty_cdev_fops);
     empty_cdev.owner = THIS_MODULE;
 
     /* Register the char device to VFS */
-    cdev_add(&empty_cdev, dev_num, NUM_DEVICES);
+    ret = cdev_add(&empty_cdev, dev_num, NUM_DEVICES);
+    if (ret != 0) {
+        pr_err("[empty_char_driver_init] cdev_add returns error: %d\n", -ret);
+        goto unregister_cdev;
+    }
 
     /* Starting from kernel v6.4+, the owner argument was removed. */
     cls = class_create(/*THIS_MODULE, */DEVICE_NAME);
-    
-    device_create(cls, NULL, MKDEV(MAJOR(dev_num), 0), NULL, "ecd");
-    
+    if (IS_ERR(cls)) {
+        ret = PTR_ERR(cls);
+        pr_err("[empty_char_driver_init] class_create returns error: %d\n", -ret);
+        goto delete_cdev;
+    }
+
+    dev = device_create(cls, NULL, MKDEV(MAJOR(dev_num), 0), NULL, "ecd");
+    if (IS_ERR(dev)) {
+        ret = PTR_ERR(dev);
+        pr_err("[empty_char_driver_init] device_create returns error: %d\n", -ret);
+        goto destroy_class;
+    }
+
     pr_info("[empty_char_driver_init] Empty Char Driver Loaded...\n");
 
     return 0;
+
+destroy_class:
+    class_destroy(cls);
+delete_cdev:
+    cdev_del(&empty_cdev);
+unregister_cdev:
+    unregister_chrdev_region(dev_num, NUM_DEVICES);
+quit:
+    return ret;
 }
 
 /** module clean-up entry point */
