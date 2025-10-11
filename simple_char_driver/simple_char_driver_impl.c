@@ -76,6 +76,3 @@ ssize_t simple_write(struct file* file, const char __user* buffer, size_t length
     /* return number of bytes which have been successfully read */
     return length;
 }
-
-// ssize_t simple_read(struct file *, char __user *, size_t, loff_t *);
-// ssize_t simple_write(struct file *, const char __user *, size_t, loff_t *);
